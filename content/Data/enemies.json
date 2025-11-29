@@ -1,0 +1,10 @@
+[
+  {
+    "id": "angry_tomato",
+    "hp": 38,
+    "speed": 115,
+    "attacks": [
+      { "type": "lunge", "damage": 6 }
+    ]
+  }
+]
