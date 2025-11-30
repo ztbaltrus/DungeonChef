@@ -3,8 +3,12 @@
     "id": "angry_tomato",
     "hp": 38,
     "speed": 115,
+    "texture": "Sprites/Enemies/angry_tomato.png",
     "attacks": [
-      { "type": "lunge", "damage": 6 }
+      {
+        "type": "lunge",
+        "damage": 6
+      }
     ]
   }
 ]

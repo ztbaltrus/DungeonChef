@@ -40,6 +40,13 @@ namespace DungeonChef.Src.Core
         public static readonly int VirtualHeight = 900;
         private int _coins;
 
+        // ---------------------------------------------------------------------
+        // Game state handling (start screen vs running)
+        // ---------------------------------------------------------------------
+        private enum GameState { StartScreen, Running }
+        private GameState _state = GameState.StartScreen;
+        private UI.StartScreen? _startScreen;
+
         public GameRoot()
         {
             _gdm = new GraphicsDeviceManager(this)
@@ -63,7 +70,9 @@ namespace DungeonChef.Src.Core
             _world = new World();
             _hud = new Hud();
 
-            StartNewRun();
+            // Initialise start screen UI (covers the whole window)
+            _startScreen = new UI.StartScreen(GraphicsDevice, Content);
+            _state = GameState.StartScreen;
         }
 
         private void StartNewRun()
@@ -107,7 +116,20 @@ namespace DungeonChef.Src.Core
             if (kb.IsKeyDown(Keys.Escape))
                 Exit();
 
-            // Optional: F5 for new run
+            if (_state == GameState.StartScreen)
+            {
+                // Press Enter to begin the game
+                if (kb.IsKeyDown(Keys.Enter))
+                {
+                    _state = GameState.Running;
+                    StartNewRun();
+                }
+                // Skip the rest of the update loop while on the start screen
+                base.Update(gameTime);
+                return;
+            }
+
+            // Optional: F5 for new run (debug)
             if (kb.IsKeyDown(Keys.F5))
             {
                 StartNewRun();
@@ -138,6 +160,20 @@ namespace DungeonChef.Src.Core
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(new Color(18, 18, 22));
+
+            if (_state == GameState.StartScreen)
+            {
+                // Draw only the start screen UI
+                _sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp,
+                    depthStencilState: null,
+                    rasterizerState: null,
+                    effect: null,
+                    transformMatrix: Matrix.Identity);
+                _startScreen?.Draw(_sb, VirtualWidth, VirtualHeight);
+                _sb.End();
+                base.Draw(gameTime);
+                return;
+            }
 
             // WORLD
             _sb.Begin(
@@ -246,19 +282,27 @@ namespace DungeonChef.Src.Core
             if (_roomController == null)
                 return;
 
+            // Preserve the existing player entity (and its HP) across rooms.
+            var existingPlayer = _world.Entities.FirstOrDefault(e => e.IsPlayer);
+            if (existingPlayer == null)
+                return;
+
             bool ok = _roomController.TryMoveTo(door.TargetRoom);
             if (!ok)
                 return;
 
-            _world.Entities.Clear();
+            // Remove all non-player entities (enemies, pickups, etc.) but keep the player.
+            _world.Entities.RemoveAll(e => !e.IsPlayer);
 
-            var player = _world.CreateEntity(door.NewRoomSpawn);
-            player.IsPlayer = true;
+            // Move the existing player to the new room's spawn position.
+            existingPlayer.Position = door.NewRoomSpawn;
+            existingPlayer.Grid = door.NewRoomSpawn;
+            existingPlayer.Velocity = Vector2.Zero;
 
             _roomEnemySpawner.SpawnEnemiesForCurrentRoom(_world);
             _pickupSystem.SpawnPickupsForCurrentRoom(_world);
 
-            CenterCameraOn(player.Position);
+            CenterCameraOn(existingPlayer.Position);
         }
 
         private void CenterCameraOn(Vector2 worldPos)

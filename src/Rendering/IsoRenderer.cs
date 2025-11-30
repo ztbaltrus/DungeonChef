@@ -65,7 +65,15 @@ namespace DungeonChef.Src.Rendering
                 }
                 else if (e.IsEnemy)
                 {
-                    sprite = DummyEnemy!;
+                    // Try to load a specific enemy sprite based on the EnemyId field.
+                    Texture2D? specific = null;
+                    if (!string.IsNullOrEmpty(e.EnemyId))
+                    {
+                        // Expect enemy sprites to be located under Content/Sprites/Enemies/<id>.png
+                        var texturePath = $"Sprites/Enemies/{e.EnemyId}.png"; // Full relative path inside Content
+                        specific = EnemySpriteAtlas.GetTexture(sb.GraphicsDevice, texturePath);
+                    }
+                    sprite = specific ?? DummyEnemy!;
                     layer = 0.5f;
                 }
                 else if (e.IsPickup)

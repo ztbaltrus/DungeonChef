@@ -31,3 +31,5 @@ C:\Sourcecode\DungeonChef\bin\Debug\net8.0\Content\Sprites\Items\apple.png
 C:\Sourcecode\DungeonChef\bin\Debug\net8.0\Content\Sprites\Items\health_snack.png
 C:\Sourcecode\DungeonChef\bin\Debug\net8.0\Content\Sprites\UI\coin_large.png
 C:\Sourcecode\DungeonChef\bin\Debug\net8.0\Content\Sprites\UI\coin_small.png
+C:\Sourcecode\DungeonChef\obj\Debug\net8.0\DungeonChef.sourcelink.json
+C:\Sourcecode\DungeonChef\bin\Debug\net8.0\Content\Sprites\Enemies\angry_tomato.png

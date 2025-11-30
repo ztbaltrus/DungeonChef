@@ -3,6 +3,7 @@ using DungeonChef.Src.Gameplay;
 using DungeonChef.Src.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Serilog;
 
 namespace DungeonChef.Src.UI
 {
@@ -20,17 +21,18 @@ namespace DungeonChef.Src.UI
             if (player == null)
                 return;
 
-            // Simple Aroma/Buff indicator bar stub at top-left
-            var buffRect = new Rectangle(20, 20, 200, 20);
-            sb.Draw(_pixel!, buffRect, Color.Black * 0.5f);
+            // // Simple Aroma/Buff indicator bar stub at top-left
+            // var buffRect = new Rectangle(20, 20, 200, 20);
+            // sb.Draw(_pixel!, buffRect, Color.Black * 0.5f);
 
-            var buff = BuffSystem.Get(player);
-            if (buff != null && buff.Active.Count > 0)
-            {
-                var activeRect = new Rectangle(20, 20, 200, 20);
-                sb.Draw(_pixel!, activeRect, Color.Orange * 0.6f);
-            }
+            // var buff = BuffSystem.Get(player);
+            // if (buff != null && buff.Active.Count > 0)
+            // {
+            //     var activeRect = new Rectangle(20, 20, 200, 20);
+            //     sb.Draw(_pixel!, activeRect, Color.Orange * 0.6f);
+            // }
 
+            DrawHealthBar(sb, player); // Move this line up
             DrawCoins(sb, coins);
         }
 
@@ -61,6 +63,23 @@ namespace DungeonChef.Src.UI
             // Simple blocky numeric display for the amount
             var numberOrigin = new Vector2(panelRect.X + 48, panelRect.Y + 8);
             DrawNumber(sb, coins, numberOrigin, 2, Color.Gold);
+        }
+
+        private void DrawHealthBar(SpriteBatch sb, Entity player)
+        {
+            // Health bar
+            var healthBarRect = new Rectangle(20, 20, 200, 20);
+            sb.Draw(_pixel!, healthBarRect, Color.Green);
+
+            // Health percentage text
+            var healthTextOrigin = new Vector2(healthBarRect.X + 8, healthBarRect.Y - 5);
+            int healthPercentage = 0;
+            if (player.HP > 0 && player.MaxHP > 0)
+            {
+                // Use floating‑point division to get a proper percentage before casting to int.
+                healthPercentage = (int)(player.HP / player.MaxHP * 100f);
+            }
+            DrawNumber(sb, healthPercentage, healthTextOrigin, 1, Color.White);
         }
 
         private void DrawNumber(SpriteBatch sb, int value, Vector2 topLeft, int pixelSize, Color color)

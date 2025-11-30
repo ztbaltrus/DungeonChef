@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using DungeonChef.Src.ECS;
 using DungeonChef.Src.Gameplay.Rooms;
 using Microsoft.Xna.Framework;
+using DungeonChef.Src.Gameplay; // For EnemyFactory
 
 namespace DungeonChef.Src.Gameplay
 {
@@ -37,6 +39,14 @@ namespace DungeonChef.Src.Gameplay
             int seed = _seedProvider() ^ room.GridPos.GetHashCode();
             var rng = new Random(seed);
 
+            // Ensure enemy definitions are loaded from the JSON file (relative to the executable directory).
+            if (EnemyFactory.GetRandom(rng) == null) // triggers load if not yet loaded
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string jsonPath = Path.Combine(baseDir, "Content", "Data", "enemies.json");
+                EnemyFactory.Load(jsonPath);
+            }
+
             int enemyCount = rng.Next(2, 5);
 
             for (int i = 0; i < enemyCount; i++)
@@ -46,7 +56,20 @@ namespace DungeonChef.Src.Gameplay
 
                 var enemy = world.CreateEntity(new Vector2(x, y));
                 enemy.IsEnemy = true;
-                enemy.HP = 5f;
+
+                // Apply a random enemy definition if available.
+                var def = EnemyFactory.GetRandom(rng);
+                if (def != null)
+                {
+                    enemy.HP = def.Hp;
+                    enemy.Speed = def.Speed;
+                    enemy.EnemyId = def.Id; // Store the identifier for rendering
+                }
+                else
+                {
+                    // Fallback default values.
+                    enemy.HP = 5f;
+                }
             }
 
             room.EnemiesSpawned = true;
