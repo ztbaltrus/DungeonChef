@@ -2,14 +2,12 @@ using System;
 using System.Linq;
 using DungeonChef.Src.ECS;
 using DungeonChef.Src.Gameplay;
-using DungeonChef.Src.Gameplay.Items;
 using DungeonChef.Src.Gameplay.Rooms;
 using DungeonChef.Src.Rendering;
 using DungeonChef.Src.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using Serilog;
 
 namespace DungeonChef.Src.Core
 {
@@ -23,6 +21,9 @@ namespace DungeonChef.Src.Core
         private readonly MovementSystem _movementSystem = new();
         private readonly EnemySystem _enemySystem = new();
         private readonly CombatSystem _combatSystem = new();
+        private RoomEnemySpawner _roomEnemySpawner = null!;
+        private PickupSystem _pickupSystem = null!;
+        private RoomClearSystem _roomClearSystem = null!;
 
 
         private World _world = null!;
@@ -51,10 +52,6 @@ namespace DungeonChef.Src.Core
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
-                .CreateLogger();
-
             Window.Title = "Dungeon Chef (FNA)";
         }
 
@@ -80,15 +77,18 @@ namespace DungeonChef.Src.Core
             _roomController = new RoomController(rooms);
             _minimap = new Minimap(_roomController);
             _interactPrompt = new InteractPrompt();
+            _roomEnemySpawner = new RoomEnemySpawner(_roomController, () => _currentRunSeed);
+            _pickupSystem = new PickupSystem(_roomController);
+            _roomClearSystem = new RoomClearSystem(_roomController);
 
             // Spawn player in middle of room space
             var startPos = new Vector2(4.5f, 4.5f);
             var player = _world.CreateEntity(startPos);
             player.IsPlayer = true;
 
-            // Spawn enemies for starting room? For now, skip start.
-            SpawnEnemiesForCurrentRoom();
-            SpawnPickupsForCurrentRoom();
+            // Spawn enemies and pickups for starting room
+            _roomEnemySpawner.SpawnEnemiesForCurrentRoom(_world);
+            _pickupSystem.SpawnPickupsForCurrentRoom(_world);
 
             CenterCameraOn(player.Position);
         }
@@ -121,9 +121,8 @@ namespace DungeonChef.Src.Core
             var currentRoom = _roomController?.CurrentRoom;
             _combatSystem.Update(_world, gameTime, _camera, currentRoom!);
 
-            UpdateRoomClearState();
-
-            HandlePickups();
+            _roomClearSystem.Update(_world);
+            _pickupSystem.Update(_world, ref _coins);
 
             var player = _world.Entities.FirstOrDefault(e => e.IsPlayer);
             if (player != null)
@@ -256,53 +255,11 @@ namespace DungeonChef.Src.Core
             var player = _world.CreateEntity(door.NewRoomSpawn);
             player.IsPlayer = true;
 
-            SpawnEnemiesForCurrentRoom();
-            SpawnPickupsForCurrentRoom();
+            _roomEnemySpawner.SpawnEnemiesForCurrentRoom(_world);
+            _pickupSystem.SpawnPickupsForCurrentRoom(_world);
 
             CenterCameraOn(player.Position);
         }
-
-        private void SpawnEnemiesForCurrentRoom()
-        {
-            if (_roomController == null)
-                return;
-
-            var room = _roomController.CurrentRoom;
-            if (room == null)
-                return;
-
-            // No enemies in Start or Boss rooms
-            if (room.Type == RoomType.Start || room.Type == RoomType.Boss)
-                return;
-
-            // If this room was cleared before, do NOT respawn enemies
-            if (room.Cleared)
-                return;
-
-            // If we already spawned enemies once and player left mid-fight,
-            // do not spawn a second wave on re-entry.
-            if (room.EnemiesSpawned)
-                return;
-
-            // Simple seeded RNG so same run has deterministic layout per room
-            int seed = _currentRunSeed ^ room.GridPos.GetHashCode();
-            var rng = new Random(seed);
-
-            int enemyCount = rng.Next(2, 5); // 2–4 enemies per room
-
-            for (int i = 0; i < enemyCount; i++)
-            {
-                float x = 1f + (float)rng.NextDouble() * 7f; // 1..8
-                float y = 1f + (float)rng.NextDouble() * 7f;
-
-                var enemy = _world.CreateEntity(new Vector2(x, y));
-                enemy.IsEnemy = true;
-                enemy.HP = 5f;
-            }
-
-            room.EnemiesSpawned = true;
-        }
-
 
         private void CenterCameraOn(Vector2 worldPos)
         {
@@ -343,130 +300,5 @@ namespace DungeonChef.Src.Core
             }
         }
 
-        private void UpdateRoomClearState()
-        {
-            if (_roomController == null)
-                return;
-
-            var room = _roomController.CurrentRoom;
-            if (room == null)
-                return;
-
-            // Only care about rooms that actually have enemies
-            if (!room.EnemiesSpawned || room.Cleared)
-                return;
-
-            bool anyEnemiesAlive = _world.Entities.Any(e => e.IsEnemy);
-            if (!anyEnemiesAlive)
-            {
-                room.Cleared = true;
-                // (Optional: trigger door opening VFX/SFX here later)
-            }
-        }
-
-        private void SpawnPickupsForCurrentRoom()
-        {
-            if (_roomController == null)
-                return;
-
-            var room = _roomController.CurrentRoom;
-            if (room == null)
-                return;
-
-            foreach (var p in room.Pickups)
-            {
-                var pickup = _world.CreateEntity(p.Position);
-                pickup.IsPickup = true;
-                pickup.ItemId = p.ItemId;
-                pickup.Speed = 0f;
-            }
-        }
-
-        private void HandlePickups()
-        {
-            if (_roomController == null)
-                return;
-
-            var room = _roomController.CurrentRoom;
-            if (room == null)
-                return;
-
-            var player = _world.Entities.FirstOrDefault(e => e.IsPlayer);
-            if (player == null)
-                return;
-
-            const float pickupRange = 0.6f;
-            float pickupRangeSq = pickupRange * pickupRange;
-
-            var pickupsToRemove = new List<Entity>();
-
-            foreach (var e in _world.Entities)
-            {
-                if (!e.IsPickup)
-                    continue;
-
-                Vector2 toPickup = e.Position - player.Position;
-                if (toPickup.LengthSquared() > pickupRangeSq)
-                    continue;
-
-                // We are close enough to pick this up
-                if (!string.IsNullOrEmpty(e.ItemId))
-                {
-                    var def = ItemCatalog.GetById(e.ItemId);
-                    if (def != null)
-                    {
-                        switch (def.Type)
-                        {
-                            case "Currency":
-                                _coins += def.Value;
-                                // Debug: you can log or print this for now
-                                Serilog.Log.Information("Picked up {ItemId}, coins now = {Coins}", def.Id, _coins);
-                                break;
-
-                            case "Consumable":
-                                // For now, simple heal on player.HP (if you want that)
-                                player.HP += def.Heal;
-                                // You can clamp to a max later (e.g., 10f)
-                                Serilog.Log.Information("Picked up {ItemId}, healed {Heal}", def.Id, def.Heal);
-                                break;
-
-                            default:
-                                // Unknown type, still remove it from world/state
-                                Serilog.Log.Information("Picked up {ItemId} (unknown type {Type})", def.Id, def.Type);
-                                break;
-                        }
-                    }
-                }
-
-                pickupsToRemove.Add(e);
-            }
-
-            if (pickupsToRemove.Count == 0)
-                return;
-
-            // Remove from world
-            foreach (var ent in pickupsToRemove)
-            {
-                _world.Entities.Remove(ent);
-            }
-
-            // Remove from room.Pickups so they don't respawn next time
-            foreach (var ent in pickupsToRemove)
-            {
-                if (string.IsNullOrEmpty(ent.ItemId))
-                    continue;
-
-                // Find the first matching pickup in this room by id + position
-                var match = room.Pickups.FirstOrDefault(p =>
-                    p.ItemId == ent.ItemId &&
-                    Vector2.DistanceSquared(p.Position, ent.Position) < 0.0001f
-                );
-
-                if (match != null)
-                {
-                    room.Pickups.Remove(match);
-                }
-            }
-        }
     }
 }
