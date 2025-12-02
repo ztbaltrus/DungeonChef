@@ -1,4 +1,5 @@
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.Entities;
 using DungeonChef.Src.Rendering;
 using Microsoft.Xna.Framework;
 
@@ -40,7 +41,7 @@ namespace DungeonChef.Src.Gameplay
 
             foreach (var e in world.Entities)
             {
-                if (!e.IsPlayer)
+                if (e.GetType() != typeof(Player))
                     continue;
 
                 Vector2 move = input.Move; // screen-space input from WASD

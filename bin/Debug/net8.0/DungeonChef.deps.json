@@ -8,7 +8,6 @@
     ".NETCoreApp,Version=v8.0": {
       "DungeonChef/1.0.0": {
         "dependencies": {
-          "FNA": "1.0.0",
           "Newtonsoft.Json": "13.0.3",
           "Serilog": "3.1.1",
           "Serilog.Sinks.Console": "5.0.1",
@@ -42,13 +41,6 @@
           "lib/net7.0/Serilog.Sinks.Console.dll": {
             "assemblyVersion": "5.0.1.0",
             "fileVersion": "5.0.1.0"
-          }
-        }
-      },
-      "FNA/1.0.0": {
-        "runtime": {
-          "FNA.dll": {
-            "fileVersion": "0.0.0.0"
           }
         }
       },
@@ -88,11 +80,6 @@
       "sha512": "sha512-6Jt8jl9y2ey8VV7nVEUAyjjyxjAQuvd5+qj4XYAT9CwcsvR70HHULGBeD+K2WCALFXf7CFsNQT4lON6qXcu2AA==",
       "path": "serilog.sinks.console/5.0.1",
       "hashPath": "serilog.sinks.console.5.0.1.nupkg.sha512"
-    },
-    "FNA/1.0.0": {
-      "type": "project",
-      "serviceable": false,
-      "sha512": ""
     },
     "FNA.Reference/25.11.0.0": {
       "type": "reference",

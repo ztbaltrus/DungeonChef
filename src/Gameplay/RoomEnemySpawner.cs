@@ -54,21 +54,13 @@ namespace DungeonChef.Src.Gameplay
                 float x = 1f + (float)rng.NextDouble() * 7f;
                 float y = 1f + (float)rng.NextDouble() * 7f;
 
-                var enemy = world.CreateEntity(new Vector2(x, y));
-                enemy.IsEnemy = true;
 
                 // Apply a random enemy definition if available.
                 var def = EnemyFactory.GetRandom(rng);
                 if (def != null)
                 {
-                    enemy.HP = def.Hp;
-                    enemy.Speed = def.Speed;
+                    var enemy = world.CreateEnemy(new Vector2(x, y), def.Id);
                     enemy.EnemyId = def.Id; // Store the identifier for rendering
-                }
-                else
-                {
-                    // Fallback default values.
-                    enemy.HP = 5f;
                 }
             }
 

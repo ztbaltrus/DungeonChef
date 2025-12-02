@@ -1,52 +1,43 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using DungeonChef.Src.Utils;
 
 namespace DungeonChef.Src.UI
 {
     /// <summary>
-    /// Simple start screen that shows the game title and a "Press Enter to Start" prompt.
+    /// Simple start screen that shows a start button.
     /// </summary>
     public sealed class StartScreen
     {
-        private readonly SpriteFont _font;
         private readonly Texture2D _background;
+        private readonly Texture2D _buttonTexture;
 
-        public StartScreen(GraphicsDevice gd, Microsoft.Xna.Framework.Content.ContentManager content)
+        public StartScreen(GraphicsDevice gd)
         {
-            // Create a plain dark background texture.
+            // Create a solid dark background texture
             _background = new Texture2D(gd, 1, 1);
             _background.SetData(new[] { new Color(10, 10, 15) });
-
-            // Load a default sprite font from the Content pipeline. If the font asset does not exist, we simply skip drawing text.
-            try
-            {
-                _font = content.Load<SpriteFont>("DefaultFont");
-            }
-            catch
-            {
-                _font = null!;
-            }
+            
+            // Create a simple button texture
+            _buttonTexture = new Texture2D(gd, 1, 1);
+            _buttonTexture.SetData(new[] { Color.Green });
         }
 
         public void Draw(SpriteBatch sb, int screenWidth, int screenHeight)
         {
-            // Fill background
-            sb.Draw(_background, new Rectangle(0, 0, screenWidth, screenHeight), Color.Black);
+            // Clear the screen with a dark background
+            sb.GraphicsDevice.Clear(new Color(10, 10, 15));
 
-            if (_font == null)
-                return;
-
-            const string title = "Dungeon Chef";
-            const string prompt = "Press Enter to Start";
-
-            var titleSize = _font.MeasureString(title);
-            var promptSize = _font.MeasureString(prompt);
-
-            var titlePos = new Vector2((screenWidth - titleSize.X) / 2f, screenHeight / 3f);
-            var promptPos = new Vector2((screenWidth - promptSize.X) / 2f, screenHeight / 2f);
-
-            sb.DrawString(_font, title, titlePos, Color.White);
-            sb.DrawString(_font, prompt, promptPos, Color.LightGray);
+            // Draw background
+            sb.Draw(_background, new Rectangle(0, 0, screenWidth, screenHeight), Color.White);
+            
+            // Draw title text
+            
+            // Draw subtitle text
+            TextRenderer.DrawText(sb, "The Queen is Hungry", new Vector2(screenWidth / 2 - 50, screenHeight / 2 - 40), Color.White, 1.0f);
+            
+            // Draw start text
+            TextRenderer.DrawText(sb, "Press Enter to Start", new Vector2(screenWidth / 2 - 50, screenHeight / 2), Color.White, 1.0f);
         }
     }
 }

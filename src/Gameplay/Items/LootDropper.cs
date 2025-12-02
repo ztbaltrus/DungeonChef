@@ -16,10 +16,7 @@ namespace DungeonChef.Src.Gameplay.Items
                 return;
 
             // Spawn pickup entity
-            var pickup = world.CreateEntity(position);
-            pickup.IsPickup = true;
-            pickup.ItemId = def.Id;
-            pickup.Speed = 0f;
+            var pickup = world.CreateLoot(position, def.Id);
 
             // Persist it on the room
             room.Pickups.Add(new RoomPickupState

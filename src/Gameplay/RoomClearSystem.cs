@@ -1,5 +1,6 @@
 using System.Linq;
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.Entities;
 using DungeonChef.Src.Gameplay.Rooms;
 
 namespace DungeonChef.Src.Gameplay
@@ -25,7 +26,7 @@ namespace DungeonChef.Src.Gameplay
             if (!room.EnemiesSpawned || room.Cleared)
                 return;
 
-            bool anyEnemiesAlive = world.Entities.Any(e => e.IsEnemy);
+            bool anyEnemiesAlive = world.Entities.Any(e => e.GetType() == typeof(Enemy));
             if (!anyEnemiesAlive)
             {
                 room.Cleared = true;

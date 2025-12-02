@@ -7,6 +7,8 @@ using DungeonChef.Src.Gameplay.Rooms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using DungeonChef.Src.Entities;
+using System.Runtime.Serialization;
 
 namespace DungeonChef.Src.Gameplay
 {
@@ -38,7 +40,7 @@ namespace DungeonChef.Src.Gameplay
             _swingVisibleTimer -= dt;
             if (_swingVisibleTimer < 0f) _swingVisibleTimer = 0f;
 
-            var player = world.Entities.FirstOrDefault(e => e.IsPlayer);
+            var player = world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
             if (player == null)
                 return;
 
@@ -87,7 +89,7 @@ namespace DungeonChef.Src.Gameplay
 
             foreach (var e in world.Entities)
             {
-                if (!e.IsEnemy)
+                if (e.GetType() != typeof(Enemy))
                     continue;
 
                 Vector2 toEnemy = e.Position - player.Position;

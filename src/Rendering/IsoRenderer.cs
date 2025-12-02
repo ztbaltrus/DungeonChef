@@ -1,5 +1,6 @@
 using DungeonChef.Src.Core;
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.Entities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
@@ -58,28 +59,30 @@ namespace DungeonChef.Src.Rendering
                 Texture2D sprite;
                 float layer = 0.5f;
 
-                if (e.IsPlayer)
+                if (e.GetType() == typeof(Player))
                 {
                     sprite = DummyHero!;
                     layer = 0.6f;
                 }
-                else if (e.IsEnemy)
+                else if (e.GetType() == typeof(Enemy))
                 {
                     // Try to load a specific enemy sprite based on the EnemyId field.
                     Texture2D? specific = null;
-                    if (!string.IsNullOrEmpty(e.EnemyId))
+                    Enemy enemy = e as Enemy;
+                    if (!string.IsNullOrEmpty(enemy.EnemyId))
                     {
                         // Expect enemy sprites to be located under Content/Sprites/Enemies/<id>.png
-                        var texturePath = $"Sprites/Enemies/{e.EnemyId}.png"; // Full relative path inside Content
+                        var texturePath = $"Sprites/Enemies/{enemy.EnemyId}.png"; // Full relative path inside Content
                         specific = EnemySpriteAtlas.GetTexture(sb.GraphicsDevice, texturePath);
                     }
                     sprite = specific ?? DummyEnemy!;
                     layer = 0.5f;
                 }
-                else if (e.IsPickup)
+                else if (e.GetType() == typeof(Loot))
                 {
                     // Try to get the real item texture first
-                    var tex = ItemSpriteAtlas.GetTexture(sb.GraphicsDevice, e.ItemId);
+                    Loot loot = e as Loot;
+                    var tex = ItemSpriteAtlas.GetTexture(sb.GraphicsDevice, loot.ItemId);
                     sprite = tex ?? DummyPickup!;
                     layer = 0.4f;
                 }

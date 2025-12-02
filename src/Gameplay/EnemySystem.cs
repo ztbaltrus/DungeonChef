@@ -1,5 +1,6 @@
 using System.Linq;
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.Entities;
 using DungeonChef.Src.Rendering;
 using Microsoft.Xna.Framework;
 using Serilog;
@@ -20,13 +21,13 @@ namespace DungeonChef.Src.Gameplay
         {
             float dt = (float)gt.ElapsedGameTime.TotalSeconds;
 
-            var player = world.Entities.FirstOrDefault(e => e.IsPlayer);
+            var player = world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
             if (player == null)
                 return;
 
             foreach (var e in world.Entities)
             {
-                if (!e.IsEnemy)
+                if (e.GetType() != typeof(Enemy))
                     continue;
 
                 Vector2 toPlayer = player.Position - e.Position;

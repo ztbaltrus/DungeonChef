@@ -1,9 +1,11 @@
 using DungeonChef.Src.Core;
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.Entities;
 using Microsoft.Xna.Framework;
 
 namespace DungeonChef.Src.Gameplay
 {
+    //TODO: Not implemented
     public enum CookResult
     {
         Perfect,
@@ -61,7 +63,7 @@ namespace DungeonChef.Src.Gameplay
 
         private void ApplyDummyBuff(World world, CookResult result)
         {
-            var player = world.Entities.Find(e => e.IsPlayer);
+            var player = world.Entities.Find(e => e.GetType() == typeof(Player));
             if (player == null) return;
 
             float duration = result switch

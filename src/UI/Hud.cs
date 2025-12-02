@@ -1,4 +1,5 @@
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.Entities;
 using DungeonChef.Src.Gameplay;
 using DungeonChef.Src.Rendering;
 using Microsoft.Xna.Framework;
@@ -17,7 +18,7 @@ namespace DungeonChef.Src.UI
             EnsurePixel(sb.GraphicsDevice);
             EnsureCoinIcon(sb.GraphicsDevice);
 
-            var player = world.Entities.Find(e => e.IsPlayer);
+            var player = world.Entities.Find(e => e.GetType() == typeof(Player));
             if (player == null)
                 return;
 
@@ -79,7 +80,7 @@ namespace DungeonChef.Src.UI
                 // Use floating‑point division to get a proper percentage before casting to int.
                 healthPercentage = (int)(player.HP / player.MaxHP * 100f);
             }
-            DrawNumber(sb, healthPercentage, healthTextOrigin, 1, Color.White);
+            DrawNumber(sb, healthPercentage, healthTextOrigin, 5, Color.White);
         }
 
         private void DrawNumber(SpriteBatch sb, int value, Vector2 topLeft, int pixelSize, Color color)

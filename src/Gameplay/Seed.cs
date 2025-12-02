@@ -10,8 +10,7 @@ namespace DungeonChef.Src.Gameplay
             // Center of the 10x10 world (0..9)
             var center = new Vector2(4.5f, 4.5f);
 
-            var e = world.CreateEntity(center);
-            e.IsPlayer = true;
+            var e = world.CreatePlayer(center);
 
             // Ensure Position is set to center (CreateEntity currently uses Grid)
             e.Position = center;

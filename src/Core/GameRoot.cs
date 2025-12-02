@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.Entities;
 using DungeonChef.Src.Gameplay;
 using DungeonChef.Src.Gameplay.Rooms;
 using DungeonChef.Src.Rendering;
@@ -71,7 +72,7 @@ namespace DungeonChef.Src.Core
             _hud = new Hud();
 
             // Initialise start screen UI (covers the whole window)
-            _startScreen = new UI.StartScreen(GraphicsDevice, Content);
+            _startScreen = new UI.StartScreen(GraphicsDevice);
             _state = GameState.StartScreen;
         }
 
@@ -92,8 +93,7 @@ namespace DungeonChef.Src.Core
 
             // Spawn player in middle of room space
             var startPos = new Vector2(4.5f, 4.5f);
-            var player = _world.CreateEntity(startPos);
-            player.IsPlayer = true;
+            var player = _world.CreatePlayer(startPos);
 
             // Spawn enemies and pickups for starting room
             _roomEnemySpawner.SpawnEnemiesForCurrentRoom(_world);
@@ -146,7 +146,7 @@ namespace DungeonChef.Src.Core
             _roomClearSystem.Update(_world);
             _pickupSystem.Update(_world, ref _coins);
 
-            var player = _world.Entities.FirstOrDefault(e => e.IsPlayer);
+            var player = _world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
             if (player != null)
             {
                 _camera.UpdateFollow(gameTime, player.Position);
@@ -171,7 +171,7 @@ namespace DungeonChef.Src.Core
                     transformMatrix: Matrix.Identity);
                 _startScreen?.Draw(_sb, VirtualWidth, VirtualHeight);
                 _sb.End();
-                base.Draw(gameTime);
+                // Remove the base.Draw(gameTime) call here - it was causing issues
                 return;
             }
 
@@ -208,8 +208,6 @@ namespace DungeonChef.Src.Core
             _hud.Draw(_sb, _world, _coins);
 
             _sb.End();
-
-            base.Draw(gameTime);
         }
 
         // ------------------------
@@ -218,7 +216,7 @@ namespace DungeonChef.Src.Core
 
         private void HandleDoorTransitions()
         {
-            var player = _world.Entities.FirstOrDefault(e => e.IsPlayer);
+            var player = _world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
             if (player == null || _roomController == null)
             {
                 _interactPrompt.SetPrompt(false, Vector2.Zero);
@@ -233,7 +231,7 @@ namespace DungeonChef.Src.Core
             }
 
             // 🔒 Doors are locked in ANY room while enemies are alive
-            bool enemiesAliveHere = _world.Entities.Any(e => e.IsEnemy);
+            bool enemiesAliveHere = _world.Entities.Any(e => e.GetType() == typeof(Enemy));
             if (enemiesAliveHere)
             {
                 _interactPrompt.SetPrompt(false, Vector2.Zero);
@@ -283,7 +281,7 @@ namespace DungeonChef.Src.Core
                 return;
 
             // Preserve the existing player entity (and its HP) across rooms.
-            var existingPlayer = _world.Entities.FirstOrDefault(e => e.IsPlayer);
+            var existingPlayer = _world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
             if (existingPlayer == null)
                 return;
 
@@ -292,7 +290,7 @@ namespace DungeonChef.Src.Core
                 return;
 
             // Remove all non-player entities (enemies, pickups, etc.) but keep the player.
-            _world.Entities.RemoveAll(e => !e.IsPlayer);
+            _world.Entities.RemoveAll(e => e.GetType() != typeof(Player));
 
             // Move the existing player to the new room's spawn position.
             existingPlayer.Position = door.NewRoomSpawn;

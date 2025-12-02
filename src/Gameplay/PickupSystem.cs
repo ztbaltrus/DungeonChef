@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.Entities;
 using DungeonChef.Src.Gameplay.Items;
 using DungeonChef.Src.Gameplay.Rooms;
 using Microsoft.Xna.Framework;
@@ -28,10 +29,7 @@ namespace DungeonChef.Src.Gameplay
 
             foreach (var p in room.Pickups)
             {
-                var pickup = world.CreateEntity(p.Position);
-                pickup.IsPickup = true;
-                pickup.ItemId = p.ItemId;
-                pickup.Speed = 0f;
+                var loot = world.CreateLoot(p.Position, p.ItemId);
             }
         }
 
@@ -44,7 +42,7 @@ namespace DungeonChef.Src.Gameplay
             if (room == null)
                 return;
 
-            var player = world.Entities.FirstOrDefault(e => e.IsPlayer);
+            var player = world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
             if (player == null)
                 return;
 
@@ -55,16 +53,17 @@ namespace DungeonChef.Src.Gameplay
 
             foreach (var e in world.Entities)
             {
-                if (!e.IsPickup)
+                if (e.GetType() != typeof(Loot) && e != null)
                     continue;
 
-                Vector2 toPickup = e.Position - player.Position;
+                Loot loot = e as Loot;
+                Vector2 toPickup = loot.Position - player.Position;
                 if (toPickup.LengthSquared() > pickupRangeSq)
                     continue;
 
-                if (!string.IsNullOrEmpty(e.ItemId))
+                if (!string.IsNullOrEmpty(loot.ItemId))
                 {
-                    var def = ItemCatalog.GetById(e.ItemId);
+                    var def = ItemCatalog.GetById(loot.ItemId);
                     if (def != null)
                     {
                         switch (def.Type)
@@ -86,7 +85,7 @@ namespace DungeonChef.Src.Gameplay
                     }
                 }
 
-                pickupsToRemove.Add(e);
+                pickupsToRemove.Add(loot);
             }
 
             if (pickupsToRemove.Count == 0)
@@ -99,11 +98,12 @@ namespace DungeonChef.Src.Gameplay
 
             foreach (var ent in pickupsToRemove)
             {
-                if (string.IsNullOrEmpty(ent.ItemId))
+                Loot loot = ent as Loot;
+                if (string.IsNullOrEmpty(loot.ItemId))
                     continue;
 
                 var match = room.Pickups.FirstOrDefault(p =>
-                    p.ItemId == ent.ItemId &&
+                    p.ItemId == loot.ItemId &&
                     Vector2.DistanceSquared(p.Position, ent.Position) < 0.0001f
                 );
 
