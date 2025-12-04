@@ -33,3 +33,4 @@ C:\Sourcecode\DungeonChef\obj\Debug\net8.0\refint\DungeonChef.dll
 C:\Sourcecode\DungeonChef\obj\Debug\net8.0\DungeonChef.pdb
 C:\Sourcecode\DungeonChef\obj\Debug\net8.0\DungeonChef.genruntimeconfig.cache
 C:\Sourcecode\DungeonChef\obj\Debug\net8.0\ref\DungeonChef.dll
+C:\Sourcecode\DungeonChef\bin\Debug\net8.0\Content\Sprites\Player\player_spritesheet.png

@@ -46,6 +46,9 @@ namespace DungeonChef.Src.Gameplay
 
                 Vector2 move = input.Move; // screen-space input from WASD
 
+                Player player = e as Player;
+                player.IsMoving = true;
+
                 if (move.LengthSquared() > 0f)
                 {
                     move.Normalize();
@@ -57,17 +60,17 @@ namespace DungeonChef.Src.Gameplay
 
                     // IMPORTANT: do NOT normalize worldDelta again.
                     // We want screen speed to be uniform based on our basis scaling.
-                    e.Position += worldDelta * Speed * dt;
+                    player.Position += worldDelta * Speed * dt;
 
                     // Clamp to world bounds so player stays on the tile area
-                    e.Position = new Vector2(
-                        MathHelper.Clamp(e.Position.X, WorldMinX, WorldMaxX),
-                        MathHelper.Clamp(e.Position.Y, WorldMinY, WorldMaxY)
+                    player.Position = new Vector2(
+                        MathHelper.Clamp(player.Position.X, WorldMinX, WorldMaxX),
+                        MathHelper.Clamp(player.Position.Y, WorldMinY, WorldMaxY)
                     );
                 }
 
                 // Grid = approximate tile under the player
-                e.Grid = e.Position;
+                player.Grid = player.Position;
             }
         }
 

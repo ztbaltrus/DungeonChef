@@ -11,6 +11,7 @@ namespace DungeonChef.Src.Entities
         public bool IsMoving { get; set; }
 
         public float Speed = 5f;
+        private Texture2D _playerTexture;
 
         public Player(Vector2 position)
         {
@@ -56,7 +57,7 @@ namespace DungeonChef.Src.Entities
         {
             var texture = AnimationController.GetCurrentTexture();
             var sourceRect = AnimationController.GetCurrentSourceRectangle();
-            
+
             if (texture != null && sourceRect != Rectangle.Empty)
             {
                 spriteBatch.Draw(
@@ -66,6 +67,42 @@ namespace DungeonChef.Src.Entities
                     Color.White
                 );
             }
+        }
+
+        public void LoadPlayerAnimations(Texture2D texture)
+        {
+            _playerTexture = texture;
+
+            // Create animations - adjust these values based on your sprite sheet
+            // Assuming 32x32 pixel frames (adjust as needed)
+            int frameWidth = 32;
+            int frameHeight = 32;
+
+            // Create animations for different directions
+            // You'll need to organize your sprite sheet with frames laid out properly
+            var idleAnimation = new Animation(_playerTexture, frameWidth, frameHeight, 0.2f, false);
+            var walkUpAnimation = new Animation(_playerTexture, frameWidth, frameHeight, 0.1f, true);
+            var walkDownAnimation = new Animation(_playerTexture, frameWidth, frameHeight, 0.1f, true);
+            var walkLeftAnimation = new Animation(_playerTexture, frameWidth, frameHeight, 0.1f, true);
+            var walkRightAnimation = new Animation(_playerTexture, frameWidth, frameHeight, 0.1f, true);
+            var walkUpRightAnimation = new Animation(_playerTexture, frameWidth, frameHeight, 0.1f, true);
+            var walkUpLeftAnimation = new Animation(_playerTexture, frameWidth, frameHeight, 0.1f, true);
+            var walkDownRightAnimation = new Animation(_playerTexture, frameWidth, frameHeight, 0.1f, true);
+            var walkDownLeftAnimation = new Animation(_playerTexture, frameWidth, frameHeight, 0.1f, true);
+
+            // Add animations to controller
+            this.AnimationController.AddAnimation("Idle", idleAnimation);
+            this.AnimationController.AddAnimation("WalkUp", walkUpAnimation);
+            this.AnimationController.AddAnimation("WalkDown", walkDownAnimation);
+            this.AnimationController.AddAnimation("WalkLeft", walkLeftAnimation);
+            this.AnimationController.AddAnimation("WalkRight", walkRightAnimation);
+            this.AnimationController.AddAnimation("WalkUpRight", walkUpRightAnimation);
+            this.AnimationController.AddAnimation("WalkUpLeft", walkUpLeftAnimation);
+            this.AnimationController.AddAnimation("WalkDownRight", walkDownRightAnimation);
+            this.AnimationController.AddAnimation("WalkDownLeft", walkDownLeftAnimation);
+
+            // Play idle animation initially
+            this.AnimationController.PlayAnimation("Idle");
         }
     }
 }

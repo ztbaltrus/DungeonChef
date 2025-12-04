@@ -26,7 +26,6 @@ namespace DungeonChef.Src.Core
         private PickupSystem _pickupSystem = null!;
         private RoomClearSystem _roomClearSystem = null!;
 
-
         private World _world = null!;
 
         private LevelGenerator _levelGen = null!;
@@ -36,6 +35,7 @@ namespace DungeonChef.Src.Core
         private Hud _hud = null!;
 
         private int _currentRunSeed;
+        private Texture2D _playerTexture = null!;
 
         public static readonly int VirtualWidth = 1600;
         public static readonly int VirtualHeight = 900;
@@ -76,6 +76,12 @@ namespace DungeonChef.Src.Core
             _state = GameState.StartScreen;
         }
 
+        protected override void LoadContent()
+        {
+            // Load the player texture here
+            _playerTexture = Content.Load<Texture2D>("Sprites/Player/player_spritesheet");
+        }
+
         private void StartNewRun()
         {
             _world.Entities.Clear();
@@ -94,6 +100,12 @@ namespace DungeonChef.Src.Core
             // Spawn player in middle of room space
             var startPos = new Vector2(4.5f, 4.5f);
             var player = _world.CreatePlayer(startPos);
+
+            // Initialize player animations
+            if (player is Player playerEntity)
+            {
+                playerEntity.LoadPlayerAnimations(_playerTexture);
+            }
 
             // Spawn enemies and pickups for starting room
             _roomEnemySpawner.SpawnEnemiesForCurrentRoom(_world);
