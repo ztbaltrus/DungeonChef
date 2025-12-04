@@ -1,5 +1,6 @@
+using DungeonChef.Src.Core;
 using DungeonChef.Src.ECS;
-using DungeonChef.Src.Entities;
+using DungeonChef.Src.ECS.Components;
 using DungeonChef.Src.Rendering;
 using Microsoft.Xna.Framework;
 
@@ -7,71 +8,100 @@ namespace DungeonChef.Src.Gameplay
 {
     public sealed class MovementSystem
     {
-        private const float Speed = 3f;
+        public static MovementSystem Instance { get; } = new MovementSystem();
 
-        // World bounds in "iso world" units (matching your 10x10 grid)
+        private MovementSystem()
+        {
+        }
+
         private const float WorldMinX = 0f;
         private const float WorldMinY = 0f;
-        private const float WorldMaxX = 9f; // GridWidth - 1
-        private const float WorldMaxY = 9f; // GridHeight - 1
+        private const float WorldMaxX = 9f;
+        private const float WorldMaxY = 9f;
 
-        public void Update(World world, GameTime gt, Src.Core.InputState input)
+        public void Update(World world, GameTime gt, InputState input)
         {
             float dt = (float)gt.ElapsedGameTime.TotalSeconds;
 
-            // Basis vectors in world space:
-            // ex_world -> horizontal on screen
-            // ey_world -> vertical on screen (scaled so speed matches)
-            Vector2 exWorld = Vector2.Normalize(new Vector2(1f, -1f)); // horizontal
-            Vector2 eyWorld = Vector2.Normalize(new Vector2(1f,  1f)); // vertical
+            Vector2 exWorld = Vector2.Normalize(new Vector2(1f, -1f));
+            Vector2 eyWorld = Vector2.Normalize(new Vector2(1f, 1f));
 
-            // Compute how long they appear on screen
             Vector2 exScreen = ToScreen(exWorld);
             Vector2 eyScreen = ToScreen(eyWorld);
 
             float exLen = exScreen.Length();
             float eyLen = eyScreen.Length();
 
-            // Scale vertical basis so its screen length matches horizontal
             if (eyLen > 0.0001f)
             {
                 float scale = exLen / eyLen;
                 eyWorld *= scale;
             }
 
-            foreach (var e in world.Entities)
+            foreach (var entity in world.With<MovementComponent, TransformComponent>())
             {
-                if (e.GetType() != typeof(Player))
+                var movement = entity.GetComponent<MovementComponent>();
+                if (movement.Behavior != MovementBehavior.PlayerInput)
                     continue;
 
-                Vector2 move = input.Move; // screen-space input from WASD
+                var transform = entity.GetComponent<TransformComponent>();
 
-                Player player = e as Player;
-                player.IsMoving = true;
+                Vector2 move = input.Move;
+                Vector2 worldDelta = Vector2.Zero;
 
-                if (move.LengthSquared() > 0f)
+                movement.IsMoving = move.LengthSquared() > 0f;
+
+                if (movement.IsMoving)
                 {
                     move.Normalize();
-
-                    // Build world direction from screen X/Y axes
-                    Vector2 worldDelta =
-                        move.X * exWorld +   // left/right part
-                        move.Y * eyWorld;    // up/down part
-
-                    // IMPORTANT: do NOT normalize worldDelta again.
-                    // We want screen speed to be uniform based on our basis scaling.
-                    player.Position += worldDelta * Speed * dt;
-
-                    // Clamp to world bounds so player stays on the tile area
-                    player.Position = new Vector2(
-                        MathHelper.Clamp(player.Position.X, WorldMinX, WorldMaxX),
-                        MathHelper.Clamp(player.Position.Y, WorldMinY, WorldMaxY)
-                    );
+                    worldDelta = move.X * exWorld + move.Y * eyWorld;
+                    transform.Position += worldDelta * movement.Speed * dt;
+                    transform.Position = new Vector2(
+                        MathHelper.Clamp(transform.Position.X, WorldMinX, WorldMaxX),
+                        MathHelper.Clamp(transform.Position.Y, WorldMinY, WorldMaxY));
+                    transform.Velocity = worldDelta * movement.Speed;
+                }
+                else
+                {
+                    transform.Velocity = Vector2.Zero;
                 }
 
-                // Grid = approximate tile under the player
-                player.Grid = player.Position;
+                transform.Grid = transform.Position;
+
+                if (entity.TryGetComponent(out AnimationComponent animation))
+                {
+                    ApplyMovementAnimation(animation, transform.Velocity);
+                }
             }
+        }
+
+        private static void ApplyMovementAnimation(AnimationComponent animation, Vector2 velocity)
+        {
+            if (velocity.LengthSquared() <= float.Epsilon)
+            {
+                animation.Controller.PlayAnimation("Idle");
+                return;
+            }
+
+            float vx = velocity.X;
+            float vy = velocity.Y;
+
+            if (vx > 0 && vy < 0)
+                animation.Controller.PlayAnimation("WalkUpRight");
+            else if (vx > 0 && vy > 0)
+                animation.Controller.PlayAnimation("WalkDownRight");
+            else if (vx < 0 && vy > 0)
+                animation.Controller.PlayAnimation("WalkDownLeft");
+            else if (vx < 0 && vy < 0)
+                animation.Controller.PlayAnimation("WalkUpLeft");
+            else if (vx > 0)
+                animation.Controller.PlayAnimation("WalkRight");
+            else if (vx < 0)
+                animation.Controller.PlayAnimation("WalkLeft");
+            else if (vy < 0)
+                animation.Controller.PlayAnimation("WalkUp");
+            else
+                animation.Controller.PlayAnimation("WalkDown");
         }
 
         private static Vector2 ToScreen(Vector2 world)

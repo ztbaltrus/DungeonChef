@@ -1,70 +1,19 @@
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using DungeonChef.Src.Utils;
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.ECS.Components;
+using Microsoft.Xna.Framework;
 
 namespace DungeonChef.Src.Entities
 {
-    public class Loot : Entity
+    public sealed class Loot : Entity
     {
-        public AnimationController AnimationController { get; set; }
-        public string ItemId { get; set; }
-        public bool IsPickup { get; set; }
-        public float PickupTimer { get; set; }
-        public float PickupDuration { get; set; } = 2.0f; // Duration in seconds before pickup disappears
-
-        public Loot(Vector2 position, string itemId)
+        public Loot(Vector2 position, string itemId) : base("Loot")
         {
-            Position = position;
-            Velocity = Vector2.Zero;
-            AnimationController = new AnimationController();
-            ItemId = itemId;
-            IsPickup = true;
-            Radius = 0.2f; // Smaller radius for pickup items
-            MaxHP = 100f;
-            HP = MaxHP;
-        }
+            var transform = AddComponent(new TransformComponent());
+            transform.Position = position;
+            transform.Grid = position;
 
-        public void Update(float deltaTime)
-        {
-            // Update animation
-            AnimationController.Update(deltaTime);
-            
-            // Update pickup timer
-            if (PickupTimer > 0)
-            {
-                PickupTimer -= deltaTime;
-                if (PickupTimer <= 0)
-                {
-                    // Item disappears after pickup duration
-                    HP = 0;
-                }
-            }
-            
-            // Add any pickup-specific logic here
-            Position += Velocity * deltaTime;
-        }
-
-        public void Draw(SpriteBatch spriteBatch)
-        {
-            var texture = AnimationController.GetCurrentTexture();
-            var sourceRect = AnimationController.GetCurrentSourceRectangle();
-            
-            if (texture != null && sourceRect != Rectangle.Empty)
-            {
-                spriteBatch.Draw(
-                    texture,
-                    Position,
-                    sourceRect,
-                    Color.White
-                );
-            }
-        }
-
-        public void Collect()
-        {
-            // Mark item as collected
-            PickupTimer = PickupDuration;
+            AddComponent(new LootComponent(itemId));
+            AddComponent(new RenderComponent(RenderArchetype.Loot));
         }
     }
 }

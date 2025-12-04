@@ -1,22 +1,54 @@
-using DungeonChef.Src.Rendering;
-using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
+using DungeonChef.Src.ECS.Components;
 
 namespace DungeonChef.Src.ECS
 {
-    public class Entity
+    public abstract class Entity
     {
-        public Vector2 Grid;        // logical grid position
-        public Vector2 Position;    // world space (optional)
-        public Vector2 Velocity;
+        private readonly Dictionary<Type, IComponent> _components = new();
 
-        public float Radius = 0.3f;
-        public float HP = 100f;
-        public float MaxHP = 100f;
+        protected Entity(string name)
+        {
+            Name = name;
+        }
 
-        // Simple collision box in world/grid space
-        public Rectangle Bounds;
+        public Guid Id { get; } = Guid.NewGuid();
+        public string Name { get; }
 
-        // Animation
-        public SpriteAnimator? Animator;
+        public IReadOnlyCollection<IComponent> Components => _components.Values;
+
+        public T AddComponent<T>(T component) where T : class, IComponent
+        {
+            _components[typeof(T)] = component;
+            return component;
+        }
+
+        public bool HasComponent<T>() where T : class, IComponent
+        {
+            return _components.ContainsKey(typeof(T));
+        }
+
+        public bool TryGetComponent<T>(out T component) where T : class, IComponent
+        {
+            if (_components.TryGetValue(typeof(T), out var stored) && stored is T typed)
+            {
+                component = typed;
+                return true;
+            }
+
+            component = null!;
+            return false;
+        }
+
+        public T GetComponent<T>() where T : class, IComponent
+        {
+            if (!TryGetComponent(out T component))
+            {
+                throw new InvalidOperationException($"{Name} is missing required component {typeof(T).Name}.");
+            }
+
+            return component;
+        }
     }
 }

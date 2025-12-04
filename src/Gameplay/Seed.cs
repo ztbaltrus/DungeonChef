@@ -11,10 +11,9 @@ namespace DungeonChef.Src.Gameplay
             var center = new Vector2(4.5f, 4.5f);
 
             var e = world.CreatePlayer(center);
-
-            // Ensure Position is set to center (CreateEntity currently uses Grid)
-            e.Position = center;
-            e.Grid = center;
+            var transform = e.GetComponent<Src.ECS.Components.TransformComponent>();
+            transform.Position = center;
+            transform.Grid = center;
         }
     }
 }

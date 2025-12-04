@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
+using DungeonChef.Src.ECS.Components;
 using DungeonChef.Src.Entities;
+using DungeonChef.Src.Gameplay;
 using Microsoft.Xna.Framework;
 
 namespace DungeonChef.Src.ECS
@@ -15,23 +18,14 @@ namespace DungeonChef.Src.ECS
 
         public Player CreatePlayer(Vector2 grid)
         {
-            var player = new Player(grid)
-            {
-                Grid = grid,
-                Position = grid
-            };
+            var player = new Player(grid);
             Entities.Add(player);
-            return player; 
+            return player;
         }
 
-        public Enemy CreateEnemy(Vector2 grid, string enemyId)
+        public Enemy CreateEnemy(Vector2 grid, EnemyDefinition? definition)
         {
-            var enemy = new Enemy(grid)
-            {
-                Grid = grid,
-                Position = grid,
-                EnemyId = enemyId
-            };
+            var enemy = new Enemy(grid, definition);
             Entities.Add(enemy);
             return enemy;
         }
@@ -41,6 +35,23 @@ namespace DungeonChef.Src.ECS
             var loot = new Loot(grid, itemId);
             Entities.Add(loot);
             return loot;
+        }
+
+        public Entity? FindWith<TComponent>() where TComponent : class, IComponent
+        {
+            return Entities.FirstOrDefault(e => e.HasComponent<TComponent>());
+        }
+
+        public IEnumerable<Entity> With<TComponent>() where TComponent : class, IComponent
+        {
+            return Entities.Where(e => e.HasComponent<TComponent>());
+        }
+
+        public IEnumerable<Entity> With<TComponent1, TComponent2>()
+            where TComponent1 : class, IComponent
+            where TComponent2 : class, IComponent
+        {
+            return Entities.Where(e => e.HasComponent<TComponent1>() && e.HasComponent<TComponent2>());
         }
     }
 }

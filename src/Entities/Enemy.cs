@@ -1,48 +1,47 @@
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using DungeonChef.Src.Utils;
+using System.Linq;
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.ECS.Components;
+using DungeonChef.Src.Gameplay;
+using Microsoft.Xna.Framework;
 
 namespace DungeonChef.Src.Entities
 {
-    public class Enemy : Entity
+    public sealed class Enemy : Entity
     {
-        public AnimationController AnimationController { get; set; }
-        public string EnemyId { get; set; }
-        public bool IsMoving { get; set; }
-
-        public float Speed = 2f;
-
-        public Enemy(Vector2 position)
+        public Enemy(Vector2 position, EnemyDefinition? definition) : base(definition?.Id ?? "Enemy")
         {
-            Position = position;
-            Velocity = Vector2.Zero;
-            AnimationController = new AnimationController();
-        }
+            var transform = AddComponent(new TransformComponent());
+            transform.Position = position;
+            transform.Grid = position;
 
-        public void Update(float deltaTime)
-        {
-            // Handle enemy-specific movement logic
-            AnimationController.Update(deltaTime);
-            
-            // Add enemy AI logic here
-            Position += Velocity * deltaTime;
-        }
+            float maxHp = definition?.Hp > 0 ? definition.Hp : 30f;
+            AddComponent(new HealthComponent { Max = maxHp, Current = maxHp });
 
-        public void Draw(SpriteBatch spriteBatch)
-        {
-            var texture = AnimationController.GetCurrentTexture();
-            var sourceRect = AnimationController.GetCurrentSourceRectangle();
-            
-            if (texture != null && sourceRect != Rectangle.Empty)
+            float speed = definition?.Speed > 0 ? definition.Speed : 2f;
+            AddComponent(new MovementComponent(MovementBehavior.SeekTarget, speed));
+
+            float damage = definition?.Attacks?.FirstOrDefault()?.Damage ?? 1f;
+            var enemyComponent = AddComponent(new EnemyComponent(
+                enemyId: definition?.Id ?? "generic",
+                speed: speed,
+                attackRange: 2f,
+                damage: damage,
+                attackCooldown: 1f,
+                stopDistance: 1f));
+
+            enemyComponent.MoveCooldown = 0.2f;
+
+            string? spritePath = null;
+            if (!string.IsNullOrEmpty(definition?.Texture))
             {
-                spriteBatch.Draw(
-                    texture,
-                    Position,
-                    sourceRect,
-                    Color.White
-                );
+                spritePath = $"Sprites/Enemies/{definition.Texture}";
             }
+            else if (!string.IsNullOrEmpty(definition?.Id))
+            {
+                spritePath = $"Sprites/Enemies/{definition.Id}.png";
+            }
+
+            AddComponent(new RenderComponent(RenderArchetype.Enemy, spritePath));
         }
     }
 }

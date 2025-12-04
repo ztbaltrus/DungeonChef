@@ -1,5 +1,5 @@
 using DungeonChef.Src.ECS;
-using DungeonChef.Src.Entities;
+using DungeonChef.Src.ECS.Components;
 using DungeonChef.Src.Gameplay;
 using DungeonChef.Src.Rendering;
 using Microsoft.Xna.Framework;
@@ -18,7 +18,7 @@ namespace DungeonChef.Src.UI
             EnsurePixel(sb.GraphicsDevice);
             EnsureCoinIcon(sb.GraphicsDevice);
 
-            var player = world.Entities.Find(e => e.GetType() == typeof(Player));
+            var player = world.FindWith<PlayerTagComponent>();
             if (player == null)
                 return;
 
@@ -33,7 +33,8 @@ namespace DungeonChef.Src.UI
             //     sb.Draw(_pixel!, activeRect, Color.Orange * 0.6f);
             // }
 
-            DrawHealthBar(sb, player); // Move this line up
+            var health = player.GetComponent<HealthComponent>();
+            DrawHealthBar(sb, health);
             DrawCoins(sb, coins);
         }
 
@@ -66,7 +67,7 @@ namespace DungeonChef.Src.UI
             DrawNumber(sb, coins, numberOrigin, 2, Color.Gold);
         }
 
-        private void DrawHealthBar(SpriteBatch sb, Entity player)
+        private void DrawHealthBar(SpriteBatch sb, HealthComponent health)
         {
             // Health bar
             var healthBarRect = new Rectangle(20, 20, 200, 20);
@@ -75,10 +76,10 @@ namespace DungeonChef.Src.UI
             // Health percentage text
             var healthTextOrigin = new Vector2(healthBarRect.X + 8, healthBarRect.Y - 5);
             int healthPercentage = 0;
-            if (player.HP > 0 && player.MaxHP > 0)
+            if (health.Max > 0f)
             {
-                // Use floating‑point division to get a proper percentage before casting to int.
-                healthPercentage = (int)(player.HP / player.MaxHP * 100f);
+                // Use floating-point division to get a proper percentage before casting to int.
+                healthPercentage = (int)(health.Current / health.Max * 100f);
             }
             DrawNumber(sb, healthPercentage, healthTextOrigin, 5, Color.White);
         }

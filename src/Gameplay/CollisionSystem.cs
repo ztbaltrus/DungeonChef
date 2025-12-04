@@ -1,4 +1,5 @@
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.ECS.Components;
 using Microsoft.Xna.Framework;
 
 namespace DungeonChef.Src.Gameplay
@@ -10,16 +11,16 @@ namespace DungeonChef.Src.Gameplay
         private const int WorldMaxX = 9;
         private const int WorldMaxY = 9;
 
-        public void Update(World world, GameTime gt)
+        public void Update(World world)
         {
-            foreach (var e in world.Entities)
+            foreach (var entity in world.With<TransformComponent>())
             {
-                // Clamp to simple 10x10 grid for now
-                var g = e.Grid;
-                g.X = MathHelper.Clamp(g.X, WorldMinX, WorldMaxX);
-                g.Y = MathHelper.Clamp(g.Y, WorldMinY, WorldMaxY);
-                e.Grid = g;
-                e.Position = g;
+                var transform = entity.GetComponent<TransformComponent>();
+                var grid = transform.Grid;
+                grid.X = MathHelper.Clamp(grid.X, WorldMinX, WorldMaxX);
+                grid.Y = MathHelper.Clamp(grid.Y, WorldMinY, WorldMaxY);
+                transform.Grid = grid;
+                transform.Position = grid;
             }
         }
     }

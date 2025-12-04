@@ -39,13 +39,9 @@ namespace DungeonChef.Src.Gameplay
             int seed = _seedProvider() ^ room.GridPos.GetHashCode();
             var rng = new Random(seed);
 
-            // Ensure enemy definitions are loaded from the JSON file (relative to the executable directory).
-            if (EnemyFactory.GetRandom(rng) == null) // triggers load if not yet loaded
-            {
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string jsonPath = Path.Combine(baseDir, "Content", "Data", "enemies.json");
-                EnemyFactory.Load(jsonPath);
-            }
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string jsonPath = Path.Combine(baseDir, "Content", "Data", "enemies.json");
+            EnemyFactory.Load(jsonPath);
 
             int enemyCount = rng.Next(2, 5);
 
@@ -54,18 +50,11 @@ namespace DungeonChef.Src.Gameplay
                 float x = 1f + (float)rng.NextDouble() * 7f;
                 float y = 1f + (float)rng.NextDouble() * 7f;
 
-
-                // Apply a random enemy definition if available.
                 var def = EnemyFactory.GetRandom(rng);
-                if (def != null)
-                {
-                    var enemy = world.CreateEnemy(new Vector2(x, y), def.Id);
-                    enemy.EnemyId = def.Id; // Store the identifier for rendering
-                }
+                world.CreateEnemy(new Vector2(x, y), def);
             }
 
             room.EnemiesSpawned = true;
         }
     }
 }
-

@@ -1,31 +1,27 @@
 using System.Collections.Generic;
-using System.Linq;
 using DungeonChef.Src.ECS;
-using DungeonChef.Src.Rendering;
+using DungeonChef.Src.ECS.Components;
 using DungeonChef.Src.Gameplay.Items;
 using DungeonChef.Src.Gameplay.Rooms;
+using DungeonChef.Src.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using DungeonChef.Src.Entities;
-using System.Runtime.Serialization;
 
 namespace DungeonChef.Src.Gameplay
 {
     public sealed class CombatSystem
     {
-        private const float AttackCooldown = 0.25f;  // seconds between swings
-        private const float AttackRange = 2.5f;      // world units
-        private const float AttackAngleDeg = 60f;    // cone half-angle
+        public static CombatSystem Instance { get; } = new CombatSystem();
 
-        private float _attackTimer;
+        private CombatSystem()
+        {
+        }
 
-        // --- Visual debug slash state ---
-        private float _swingVisibleTimer;            // how long to show the slash
+        private float _swingVisibleTimer;
         private Vector2 _lastAttackOriginWorld;
         private Vector2 _lastAttackDirWorld;
-
-        private Texture2D? _pixel;                   // 1x1 texture for drawing the line
+        private Texture2D? _pixel;
 
         public void Update(World world, GameTime gt, IsoCamera camera, RoomNode currentRoom)
         {
@@ -34,30 +30,24 @@ namespace DungeonChef.Src.Gameplay
 
             float dt = (float)gt.ElapsedGameTime.TotalSeconds;
 
-            _attackTimer -= dt;
-            if (_attackTimer < 0f) _attackTimer = 0f;
+            _swingVisibleTimer = MathHelper.Max(0f, _swingVisibleTimer - dt);
 
-            _swingVisibleTimer -= dt;
-            if (_swingVisibleTimer < 0f) _swingVisibleTimer = 0f;
-
-            var player = world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
+            var player = world.FindWith<PlayerTagComponent>();
             if (player == null)
                 return;
 
+            var attack = player.GetComponent<MeleeAttackComponent>();
+            var playerTransform = player.GetComponent<TransformComponent>();
+            attack.CooldownTimer = MathHelper.Max(0f, attack.CooldownTimer - dt);
+
             var mouse = Mouse.GetState();
             bool leftDown = mouse.LeftButton == ButtonState.Pressed;
-
-            if (!leftDown || _attackTimer > 0f)
+            if (!leftDown || attack.CooldownTimer > 0f)
                 return;
 
-            // --- Perform attack in direction of mouse pointer ---
-
-            // Player screen position
-            Vector2 playerIso = IsoMath.ToScreen(player.Position.X, player.Position.Y);
+            Vector2 playerIso = IsoMath.ToScreen(playerTransform.Position.X, playerTransform.Position.Y);
             Vector2 playerScreen = playerIso - camera.Position;
-
-            // Mouse screen position
-            Vector2 mouseScreen = new(mouse.X, mouse.Y);
+            Vector2 mouseScreen = new Vector2(mouse.X, mouse.Y);
 
             Vector2 screenDir = mouseScreen - playerScreen;
             if (screenDir.LengthSquared() < 0.001f)
@@ -65,81 +55,79 @@ namespace DungeonChef.Src.Gameplay
 
             screenDir.Normalize();
 
-            // Convert screen direction -> world direction (inverse iso transform)
             float a = IsoMath.TileW / 2f;
             float b = IsoMath.TileH / 2f;
 
             float dx = 0.5f * (screenDir.X / a + screenDir.Y / b);
             float dy = 0.5f * (screenDir.Y / b - screenDir.X / a);
 
-            Vector2 worldDir = new(dx, dy);
+            Vector2 worldDir = new Vector2(dx, dy);
             if (worldDir.LengthSquared() < 0.0001f)
                 return;
+
             worldDir.Normalize();
 
-            // Save for debug rendering
-            _lastAttackOriginWorld = player.Position;
+            _lastAttackOriginWorld = playerTransform.Position;
             _lastAttackDirWorld = worldDir;
-            _swingVisibleTimer = 0.12f; // show slash for 120ms
+            _swingVisibleTimer = 0.12f;
 
-            // Attack cone
-            float maxAngleCos = (float)Math.Cos(MathHelper.ToRadians(AttackAngleDeg));
-
+            float maxAngleCos = (float)System.Math.Cos(MathHelper.ToRadians(attack.AngleDegrees));
             var toRemove = new List<Entity>();
 
-            foreach (var e in world.Entities)
+            foreach (var enemy in world.With<EnemyComponent, TransformComponent>())
             {
-                if (e.GetType() != typeof(Enemy))
-                    continue;
+                var enemyTransform = enemy.GetComponent<TransformComponent>();
+                var enemyHealth = enemy.GetComponent<HealthComponent>();
 
-                Vector2 toEnemy = e.Position - player.Position;
+                Vector2 toEnemy = enemyTransform.Position - playerTransform.Position;
                 float dist = toEnemy.Length();
-                if (dist < 0.0001f || dist > AttackRange)
+                if (dist < 0.0001f || dist > attack.Range)
                     continue;
 
                 Vector2 toEnemyDir = toEnemy / dist;
-
                 float dot = Vector2.Dot(worldDir, toEnemyDir);
-                if (dot >= maxAngleCos)
-                {
-                    // Hit!
-                    e.HP -= 5f;
-                    if (e.HP <= 0f)
-                        toRemove.Add(e);
-                }
+                if (dot < maxAngleCos)
+                    continue;
+
+                enemyHealth.Damage(attack.Damage);
+                if (enemyHealth.IsDead)
+                    toRemove.Add(enemy);
             }
 
             foreach (var dead in toRemove)
             {
-                // Chance-based item/coin drop
-                LootDropper.TryDropLoot(world, dead.Position, currentRoom);
+                var deadTransform = dead.GetComponent<TransformComponent>();
+                LootDropper.TryDropLoot(world, deadTransform.Position, currentRoom);
                 world.Entities.Remove(dead);
             }
 
-            _attackTimer = AttackCooldown;
+            attack.CooldownTimer = attack.CooldownSeconds;
         }
-
-        // -------- VISUALIZATION --------
 
         private void EnsurePixel(GraphicsDevice gd)
         {
-            if (_pixel != null) return;
+            if (_pixel != null)
+                return;
+
             _pixel = new Texture2D(gd, 1, 1);
             _pixel.SetData(new[] { Color.White });
         }
 
-        public void DrawDebug(SpriteBatch sb, IsoCamera camera)
+        public void DrawDebug(SpriteBatch sb, IsoCamera camera, World world)
         {
             if (_swingVisibleTimer <= 0f)
                 return;
 
             EnsurePixel(sb.GraphicsDevice);
 
-            // Start/end in world
-            Vector2 startWorld = _lastAttackOriginWorld;
-            Vector2 endWorld = _lastAttackOriginWorld + _lastAttackDirWorld * AttackRange;
+            var player = world.FindWith<PlayerTagComponent>();
+            if (player == null)
+                return;
 
-            // Convert to screen using iso
+            var attack = player.GetComponent<MeleeAttackComponent>();
+            Vector2 startWorld = _lastAttackOriginWorld;
+            Vector2 endWorld = _lastAttackOriginWorld + _lastAttackDirWorld * attack.Range;
+
             Vector2 startIso = IsoMath.ToScreen(startWorld.X, startWorld.Y);
             Vector2 endIso = IsoMath.ToScreen(endWorld.X, endWorld.Y);
 
@@ -153,9 +141,6 @@ namespace DungeonChef.Src.Gameplay
 
             float angle = (float)System.Math.Atan2(segment.Y, segment.X);
 
-            // Slight thickness for visibility
-            float thickness = 4f;
-
             sb.Draw(
                 _pixel!,
                 position: startScreen,
@@ -163,10 +148,9 @@ namespace DungeonChef.Src.Gameplay
                 color: Color.Gold,
                 rotation: angle,
                 origin: new Vector2(0f, 0.5f),
-                scale: new Vector2(length, thickness),
+                scale: new Vector2(length, 4f),
                 effects: SpriteEffects.None,
-                layerDepth: 0.6f
-            );
+                layerDepth: 0.6f);
         }
     }
 }

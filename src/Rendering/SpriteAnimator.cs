@@ -30,16 +30,4 @@ namespace DungeonChef.Src.Rendering
             }
         }
     }
-
-    public static class AnimationSystem
-    {
-        public static void Update(World world, GameTime gt)
-        {
-            foreach (var e in world.Entities)
-            {
-                if (e.Animator != null)
-                    e.Animator.Update(gt);
-            }
-        }
-    }
 }

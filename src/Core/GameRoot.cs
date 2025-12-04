@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using DungeonChef.Src.ECS;
+using DungeonChef.Src.ECS.Components;
 using DungeonChef.Src.Entities;
 using DungeonChef.Src.Gameplay;
 using DungeonChef.Src.Gameplay.Rooms;
@@ -19,12 +20,11 @@ namespace DungeonChef.Src.Core
 
         private readonly IsoCamera _camera = new();
         private readonly Input _input = new();
-        private readonly MovementSystem _movementSystem = new();
-        private readonly EnemySystem _enemySystem = new();
-        private readonly CombatSystem _combatSystem = new();
+        private readonly MovementSystem _movementSystem = MovementSystem.Instance;
+        private readonly EnemySystem _enemySystem = EnemySystem.Instance;
+        private readonly CombatSystem _combatSystem = CombatSystem.Instance;
+        private readonly AnimationSystem _animationSystem = AnimationSystem.Instance;
         private RoomEnemySpawner _roomEnemySpawner = null!;
-        private PickupSystem _pickupSystem = null!;
-        private RoomClearSystem _roomClearSystem = null!;
 
         private World _world = null!;
 
@@ -94,24 +94,19 @@ namespace DungeonChef.Src.Core
             _minimap = new Minimap(_roomController);
             _interactPrompt = new InteractPrompt();
             _roomEnemySpawner = new RoomEnemySpawner(_roomController, () => _currentRunSeed);
-            _pickupSystem = new PickupSystem(_roomController);
-            _roomClearSystem = new RoomClearSystem(_roomController);
 
             // Spawn player in middle of room space
             var startPos = new Vector2(4.5f, 4.5f);
             var player = _world.CreatePlayer(startPos);
 
-            // Initialize player animations
-            if (player is Player playerEntity)
-            {
-                playerEntity.LoadPlayerAnimations(_playerTexture);
-            }
+            player.LoadPlayerAnimations(_playerTexture);
 
             // Spawn enemies and pickups for starting room
             _roomEnemySpawner.SpawnEnemiesForCurrentRoom(_world);
-            _pickupSystem.SpawnPickupsForCurrentRoom(_world);
+            PickupSystem.Instance.SpawnPickupsForRoom(_world, _roomController);
 
-            CenterCameraOn(player.Position);
+            var transform = player.GetComponent<TransformComponent>();
+            CenterCameraOn(transform.Position);
         }
 
         private static int NewRunSeed()
@@ -149,19 +144,27 @@ namespace DungeonChef.Src.Core
                 return;
             }
 
+            float deltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
             _input.Update();
             _movementSystem.Update(_world, gameTime, _input.State);
             _enemySystem.Update(_world, gameTime);
+            _animationSystem.Update(_world, deltaSeconds);
+
             var currentRoom = _roomController?.CurrentRoom;
-            _combatSystem.Update(_world, gameTime, _camera, currentRoom!);
+            if (currentRoom != null)
+            {
+                _combatSystem.Update(_world, gameTime, _camera, currentRoom);
+            }
 
-            _roomClearSystem.Update(_world);
-            _pickupSystem.Update(_world, ref _coins);
+            RoomClearSystem.Instance.Update(_world, _roomController);
+            PickupSystem.Instance.Update(_world, _roomController, ref _coins);
 
-            var player = _world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
+            var player = _world.FindWith<PlayerTagComponent>();
             if (player != null)
             {
-                _camera.UpdateFollow(gameTime, player.Position);
+                var transform = player.GetComponent<TransformComponent>();
+                _camera.UpdateFollow(gameTime, transform.Position);
             }
 
             HandleDoorTransitions();
@@ -202,7 +205,7 @@ namespace DungeonChef.Src.Core
             DrawDoors(_sb);
 
             // 🔹 draw attack slash on top of world
-            _combatSystem.DrawDebug(_sb, _camera);
+            _combatSystem.DrawDebug(_sb, _camera, _world);
 
             _sb.End();
 
@@ -228,13 +231,14 @@ namespace DungeonChef.Src.Core
 
         private void HandleDoorTransitions()
         {
-            var player = _world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
+            var player = _world.FindWith<PlayerTagComponent>();
             if (player == null || _roomController == null)
             {
                 _interactPrompt.SetPrompt(false, Vector2.Zero);
                 return;
             }
 
+            var playerTransform = player.GetComponent<TransformComponent>();
             var room = _roomController.CurrentRoom;
             if (room == null)
             {
@@ -243,7 +247,7 @@ namespace DungeonChef.Src.Core
             }
 
             // 🔒 Doors are locked in ANY room while enemies are alive
-            bool enemiesAliveHere = _world.Entities.Any(e => e.GetType() == typeof(Enemy));
+            bool enemiesAliveHere = _world.With<EnemyComponent>().Any();
             if (enemiesAliveHere)
             {
                 _interactPrompt.SetPrompt(false, Vector2.Zero);
@@ -253,7 +257,7 @@ namespace DungeonChef.Src.Core
             // No enemies → doors are unlocked; prompt appears only in door trigger
             _interactPrompt.SetPrompt(false, Vector2.Zero);
 
-            var playerPos = player.Position;
+            var playerPos = playerTransform.Position;
             var playerPoint = new Point((int)playerPos.X, (int)playerPos.Y);
             var kb = Keyboard.GetState();
 
@@ -293,7 +297,7 @@ namespace DungeonChef.Src.Core
                 return;
 
             // Preserve the existing player entity (and its HP) across rooms.
-            var existingPlayer = _world.Entities.FirstOrDefault(e => e.GetType() == typeof(Player));
+            var existingPlayer = _world.FindWith<PlayerTagComponent>();
             if (existingPlayer == null)
                 return;
 
@@ -302,17 +306,18 @@ namespace DungeonChef.Src.Core
                 return;
 
             // Remove all non-player entities (enemies, pickups, etc.) but keep the player.
-            _world.Entities.RemoveAll(e => e.GetType() != typeof(Player));
+            _world.Entities.RemoveAll(e => !e.HasComponent<PlayerTagComponent>());
 
             // Move the existing player to the new room's spawn position.
-            existingPlayer.Position = door.NewRoomSpawn;
-            existingPlayer.Grid = door.NewRoomSpawn;
-            existingPlayer.Velocity = Vector2.Zero;
+            var transform = existingPlayer.GetComponent<TransformComponent>();
+            transform.Position = door.NewRoomSpawn;
+            transform.Grid = door.NewRoomSpawn;
+            transform.Velocity = Vector2.Zero;
 
             _roomEnemySpawner.SpawnEnemiesForCurrentRoom(_world);
-            _pickupSystem.SpawnPickupsForCurrentRoom(_world);
+            PickupSystem.Instance.SpawnPickupsForRoom(_world, _roomController);
 
-            CenterCameraOn(existingPlayer.Position);
+            CenterCameraOn(transform.Position);
         }
 
         private void CenterCameraOn(Vector2 worldPos)

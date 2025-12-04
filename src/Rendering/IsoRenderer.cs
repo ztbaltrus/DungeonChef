@@ -1,6 +1,6 @@
 using DungeonChef.Src.Core;
 using DungeonChef.Src.ECS;
-using DungeonChef.Src.Entities;
+using DungeonChef.Src.ECS.Components;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
@@ -44,51 +44,62 @@ namespace DungeonChef.Src.Rendering
                 }
             }
 
-            // 2) Draw entities (hero etc.) on top of tiles
-            var ordered = world.Entities.OrderBy(e =>
+            var ordered = world.With<TransformComponent>().OrderBy(e =>
             {
-                var p = IsoMath.ToScreen(e.Position.X, e.Position.Y);
+                var transform = e.GetComponent<TransformComponent>();
+                var p = IsoMath.ToScreen(transform.Position.X, transform.Position.Y);
                 return p.Y;
             });
 
-            foreach (var e in ordered)
+            foreach (var entity in ordered)
             {
-                var isoPos = IsoMath.ToScreen(e.Position.X, e.Position.Y);
+                var transform = entity.GetComponent<TransformComponent>();
+                var isoPos = IsoMath.ToScreen(transform.Position.X, transform.Position.Y);
                 var screenPos = isoPos - cam.Position;
 
-                Texture2D sprite;
-                float layer = 0.5f;
-
-                if (e.GetType() == typeof(Player))
+                if (entity.TryGetComponent(out AnimationComponent animation))
                 {
-                    sprite = DummyHero!;
-                    layer = 0.6f;
-                }
-                else if (e.GetType() == typeof(Enemy))
-                {
-                    // Try to load a specific enemy sprite based on the EnemyId field.
-                    Texture2D? specific = null;
-                    Enemy enemy = e as Enemy;
-                    if (!string.IsNullOrEmpty(enemy.EnemyId))
+                    var texture = animation.Controller.GetCurrentTexture();
+                    var sourceRect = animation.Controller.GetCurrentSourceRectangle();
+                    if (texture != null && sourceRect != Rectangle.Empty)
                     {
-                        // Expect enemy sprites to be located under Content/Sprites/Enemies/<id>.png
-                        var texturePath = $"Sprites/Enemies/{enemy.EnemyId}.png"; // Full relative path inside Content
-                        specific = EnemySpriteAtlas.GetTexture(sb.GraphicsDevice, texturePath);
+                        sb.Draw(
+                            texture,
+                            screenPos,
+                            sourceRect,
+                            Color.White,
+                            0f,
+                            new Vector2(sourceRect.Width / 2f, sourceRect.Height),
+                            1f,
+                            SpriteEffects.None,
+                            layerDepth: 0.6f);
+                        continue;
                     }
-                    sprite = specific ?? DummyEnemy!;
-                    layer = 0.5f;
                 }
-                else if (e.GetType() == typeof(Loot))
+
+                Texture2D sprite = DummyHero!;
+                float layer = 0.5f;
+                if (entity.TryGetComponent(out RenderComponent render))
                 {
-                    // Try to get the real item texture first
-                    Loot loot = e as Loot;
-                    var tex = ItemSpriteAtlas.GetTexture(sb.GraphicsDevice, loot.ItemId);
-                    sprite = tex ?? DummyPickup!;
-                    layer = 0.4f;
-                }
-                else
-                {
-                    sprite = DummyHero!;
+                    switch (render.Archetype)
+                    {
+                        case RenderArchetype.Player:
+                            sprite = DummyHero!;
+                            layer = 0.6f;
+                            break;
+                        case RenderArchetype.Enemy:
+                            sprite = EnemySpriteAtlas.GetTexture(sb.GraphicsDevice, render.SpriteId) ?? DummyEnemy!;
+                            layer = 0.5f;
+                            break;
+                        case RenderArchetype.Loot:
+                            sprite = ResolveLootTexture(sb.GraphicsDevice, entity) ?? DummyPickup!;
+                            layer = 0.4f;
+                            break;
+                        default:
+                            sprite = DummyHero!;
+                            layer = 0.5f;
+                            break;
+                    }
                 }
 
                 sb.Draw(
@@ -100,10 +111,16 @@ namespace DungeonChef.Src.Rendering
                     origin: new Vector2(sprite.Width / 2f, sprite.Height),
                     scale: 1f,
                     effects: SpriteEffects.None,
-                    layerDepth: layer
-                );
+                    layerDepth: layer);
             }
 
+        }
+
+        private static Texture2D? ResolveLootTexture(GraphicsDevice gd, Entity entity)
+        {
+            return entity.TryGetComponent(out LootComponent loot)
+                ? ItemSpriteAtlas.GetTexture(gd, loot.ItemId)
+                : null;
         }
 
         private static void EnsurePlaceholders(GraphicsDevice gd)
