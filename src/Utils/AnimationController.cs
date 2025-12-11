@@ -1,19 +1,16 @@
+using DungeonChef.Src.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.Generic;
 
 namespace DungeonChef.Src.Utils
 {
     public class AnimationController
     {
-        private readonly Dictionary<string, Animation> _animations;
-        private string _currentAnimation;
-        private Animation _currentAnimationInstance;
+        private readonly Dictionary<string, Animation> _animations = new();
+        private string? _currentAnimation;
+        private Animation? _currentAnimationInstance;
         private bool _isPlaying;
-
-        public AnimationController()
-        {
-            _animations = new Dictionary<string, Animation>();
-        }
 
         public void AddAnimation(string name, Animation animation)
         {
@@ -22,13 +19,16 @@ namespace DungeonChef.Src.Utils
 
         public void PlayAnimation(string name)
         {
-            if (_animations.ContainsKey(name))
-            {
-                _currentAnimation = name;
-                _currentAnimationInstance = _animations[name];
-                _currentAnimationInstance.Reset();
-                _isPlaying = true;
-            }
+            if (!_animations.TryGetValue(name, out var animation))
+                return;
+
+            if (_isPlaying && _currentAnimation == name)
+                return;
+
+            _currentAnimation = name;
+            _currentAnimationInstance = animation;
+            _currentAnimationInstance.Reset();
+            _isPlaying = true;
         }
 
         public void Stop()
@@ -49,12 +49,12 @@ namespace DungeonChef.Src.Utils
             return _currentAnimationInstance?.GetSourceRectangle() ?? Rectangle.Empty;
         }
 
-        public Texture2D GetCurrentTexture()
+        public Texture2D? GetCurrentTexture()
         {
             return _currentAnimationInstance?.Texture;
         }
 
-        public string CurrentAnimation => _currentAnimation;
+        public string? CurrentAnimation => _currentAnimation;
         public bool IsPlaying => _isPlaying;
     }
 }

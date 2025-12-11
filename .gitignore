@@ -5,3 +5,4 @@ obj/
 .continue/
 *.db
 obj/Debug/net8.0/DungeonChef.AssemblyInfo.cs
+bin/Debug/net8.0/DungeonChef.dll

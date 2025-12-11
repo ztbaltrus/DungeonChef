@@ -1,8 +1,6 @@
-using System;
-using System.Linq;
 using DungeonChef.Src.ECS;
 using DungeonChef.Src.ECS.Components;
-using DungeonChef.Src.Entities;
+using DungeonChef.Src.ECS.Systems;
 using DungeonChef.Src.Gameplay;
 using DungeonChef.Src.Gameplay.Rooms;
 using DungeonChef.Src.Rendering;
