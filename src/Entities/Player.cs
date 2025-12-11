@@ -25,8 +25,8 @@ namespace DungeonChef.Src.Entities
         {
             var controller = new AnimationController();
 
-            const int frameWidth = 32;
-            const int frameHeight = 32;
+            const int frameWidth = 72;
+            const int frameHeight = 72;
 
             controller.AddAnimation("Idle", new Animation(texture, frameWidth, frameHeight, 0.2f, false));
             controller.AddAnimation("WalkUp", new Animation(texture, frameWidth, frameHeight, 0.1f, true));

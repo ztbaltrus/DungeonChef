@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DungeonChef")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+925cce4d1908a9a6482d556d5f02cde6cd480c14")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+179378e03bdd7db434ae60d7955f621093cd700f")]
 [assembly: System.Reflection.AssemblyProductAttribute("DungeonChef")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DungeonChef")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

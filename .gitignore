@@ -4,3 +4,4 @@ obj/
 .vs/
 .continue/
 *.db
+obj/Debug/net8.0/DungeonChef.AssemblyInfo.cs
