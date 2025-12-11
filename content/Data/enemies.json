@@ -2,7 +2,7 @@
   {
     "id": "angry_tomato",
     "hp": 38,
-    "speed": 115,
+    "speed": 1.5,
     "texture": "Sprites/Enemies/angry_tomato.png",
     "attacks": [
       {

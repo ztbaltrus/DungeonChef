@@ -3,7 +3,8 @@ using System.IO;
 using DungeonChef.Src.ECS;
 using DungeonChef.Src.Gameplay.Rooms;
 using Microsoft.Xna.Framework;
-using DungeonChef.Src.Gameplay; // For EnemyFactory
+using DungeonChef.Src.Gameplay;
+using System.ComponentModel; // For EnemyFactory
 
 namespace DungeonChef.Src.Gameplay
 {
@@ -40,7 +41,7 @@ namespace DungeonChef.Src.Gameplay
             var rng = new Random(seed);
 
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string jsonPath = Path.Combine(baseDir, "Content", "Data", "enemies.json");
+            string jsonPath = Path.Combine(baseDir, "content", "Data", "enemies.json");
             EnemyFactory.Load(jsonPath);
 
             int enemyCount = rng.Next(2, 5);

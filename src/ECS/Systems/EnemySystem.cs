@@ -31,42 +31,52 @@ namespace DungeonChef.Src.ECS.Systems
 
                 Vector2 toPlayer = playerTransform.Position - enemyTransform.Position;
                 float dist2 = toPlayer.LengthSquared();
-                float attackRangeSq = enemyComponent.AttackRange * enemyComponent.AttackRange;
-
-                if (dist2 > attackRangeSq)
+                if (dist2 <= float.Epsilon)
                 {
-                    enemyComponent.MoveTimer += dt;
-                    if (enemyComponent.MoveTimer < enemyComponent.MoveCooldown)
-                        continue;
+                    enemyTransform.Velocity = Vector2.Zero;
+                    continue;
+                }
 
-                    if (toPlayer.LengthSquared() <= float.Epsilon)
-                        continue;
+                float distance = System.MathF.Sqrt(dist2);
+                bool withinStopRange = distance <= enemyComponent.StopDistance;
+                bool withinAttackRange = distance <= enemyComponent.AttackRange;
 
-                    Vector2 dir = Vector2.Normalize(toPlayer);
-                    float stopDistSq = enemyComponent.StopDistance * enemyComponent.StopDistance;
-                    if (dist2 > stopDistSq)
-                    {
-                        enemyTransform.Position += dir * enemyComponent.Speed * dt;
-                        enemyTransform.Position = new Vector2(
-                            MathHelper.Clamp(enemyTransform.Position.X, 0f, 9f),
-                            MathHelper.Clamp(enemyTransform.Position.Y, 0f, 9f));
-                        enemyTransform.Grid = enemyTransform.Position;
-                    }
+                if (!withinStopRange)
+                {
+                    Vector2 dir = toPlayer / distance;
+                    float remaining = distance - enemyComponent.StopDistance;
+                    float maxStep = enemyComponent.Speed * dt;
+                    float actualStep = System.MathF.Min(remaining, maxStep);
+                    Vector2 frameDelta = dir * actualStep;
 
-                    enemyComponent.MoveTimer = 0f;
+                    enemyTransform.Position += frameDelta;
+                    enemyTransform.Position = new Vector2(
+                        MathHelper.Clamp(enemyTransform.Position.X, 0f, 9f),
+                        MathHelper.Clamp(enemyTransform.Position.Y, 0f, 9f));
+                    enemyTransform.Grid = enemyTransform.Position;
+                    enemyTransform.Velocity = frameDelta / dt;
                 }
                 else
                 {
+                    enemyTransform.Velocity = Vector2.Zero;
+                }
+
+                if (withinAttackRange)
+                {
                     enemyComponent.AttackTimer += dt;
-                    if (enemyComponent.AttackTimer < enemyComponent.AttackCooldown)
-                        continue;
-
-                    playerHealth.Damage(enemyComponent.Damage);
-                    if (playerHealth.IsDead)
+                    if (enemyComponent.AttackTimer >= enemyComponent.AttackCooldown)
                     {
-                        Log.Information("Player has been defeated by an enemy.");
-                    }
+                        playerHealth.Damage(enemyComponent.Damage);
+                        if (playerHealth.IsDead)
+                        {
+                            Log.Information("Player has been defeated by an enemy.");
+                        }
 
+                        enemyComponent.AttackTimer = 0f;
+                    }
+                }
+                else
+                {
                     enemyComponent.AttackTimer = 0f;
                 }
             }

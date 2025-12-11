@@ -20,7 +20,5 @@ namespace DungeonChef.Src.ECS.Components
         public float StopDistance { get; }
 
         public float AttackTimer { get; set; }
-        public float MoveTimer { get; set; }
-        public float MoveCooldown { get; set; } = 1f;
     }
 }
